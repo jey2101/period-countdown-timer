@@ -508,6 +508,11 @@
   let periodStartTimes = Array(numPeriods).fill(''); // "HH:MM" 24h
 
   // ── Persistence ─────────────────────────────────────────────────────────────
+  // Default schedule: 8:00 AM start, 46 min periods, 3 min breaks
+  function getDefaultTimes() {
+    return calculateTimes('08:00', 46, 3);
+  }
+
   function loadTimes() {
     try {
       const countRaw = localStorage.getItem(COUNT_KEY);
@@ -521,7 +526,7 @@
         if (Array.isArray(parsed))
           periodEndTimes = Array(numPeriods).fill('').map((_, i) => parsed[i] || '');
       } else {
-        periodEndTimes = Array(numPeriods).fill('');
+        periodEndTimes = getDefaultTimes().endTimes;
       }
       const startRaw = localStorage.getItem(START_KEY);
       if (startRaw) {
@@ -529,7 +534,7 @@
         if (Array.isArray(parsed))
           periodStartTimes = Array(numPeriods).fill('').map((_, i) => parsed[i] || '');
       } else {
-        periodStartTimes = Array(numPeriods).fill('');
+        periodStartTimes = getDefaultTimes().startTimes;
       }
     } catch (e) { /* ignore */ }
   }
