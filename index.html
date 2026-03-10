@@ -27,6 +27,8 @@
       background: #f0f2f5;
       color: var(--text);
       min-height: 100vh;
+      display: flex;
+      flex-direction: column;
     }
 
     /* Header */
@@ -319,6 +321,7 @@
     main {
       padding: 24px;
       max-width: 1100px;
+      width: 100%;
       margin: 0 auto;
     }
 
@@ -333,31 +336,25 @@
 
     .period-grid {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
       gap: 16px;
+      justify-content: center;
     }
 
-    @media (min-width: 480px) {
-      .period-grid { grid-template-columns: repeat(3, 1fr); }
-    }
-
-    @media (min-width: 700px) {
-      .period-grid { grid-template-columns: repeat(4, 1fr); }
-    }
-
-    @media (min-width: 900px) {
-      .period-grid { grid-template-columns: repeat(5, 1fr); }
-    }
 
     /* Period Cards */
     .period-card {
       background: var(--card-bg);
       border: 2px solid var(--border);
       border-radius: var(--radius);
-      padding: 20px 16px;
+      padding: 0.5cqmin 0.375cqmin;
       text-align: center;
       box-shadow: var(--shadow);
       transition: border-color 0.3s, background 0.3s, transform 0.2s;
+      container-type: size;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
     }
 
     .period-card:hover { transform: translateY(-1px); }
@@ -373,12 +370,12 @@
     }
 
     .period-label {
-      font-size: 0.7rem;
+      font-size: 9cqmin;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.08em;
       color: var(--text-secondary);
-      margin-bottom: 8px;
+      margin-bottom: 3cqmin;
     }
 
     .period-card.active .period-label { color: #059669; }
@@ -386,12 +383,12 @@
 
     .period-start-time,
     .period-end-time {
-      font-size: 0.72rem;
+      font-size: 8cqmin;
       color: var(--text-secondary);
     }
 
-    .period-start-time { margin-bottom: 6px; }
-    .period-end-time   { margin-top: 6px; }
+    .period-start-time { margin-bottom: 3cqmin; }
+    .period-end-time   { margin-top: 3cqmin; }
 
     .period-card.active .period-start-time,
     .period-card.active .period-end-time { color: #059669; }
@@ -400,24 +397,25 @@
     .period-card.ended .period-end-time  { color: var(--muted); }
 
     .period-countdown {
-      font-size: 1.5rem;
+      font-size: 18cqmin;
       font-weight: 800;
       color: var(--navy);
       line-height: 1.2;
       font-variant-numeric: tabular-nums;
       letter-spacing: -0.02em;
+      white-space: nowrap;
     }
 
     .period-card.active .period-countdown {
       color: #065f46;
     }
 
-    .period-card.ended .period-countdown { color: var(--muted); font-size: 1.1rem; }
+    .period-card.ended .period-countdown { color: var(--muted); font-size: 18cqmin; }
 
     .no-config-hint {
-      font-size: 0.72rem;
+      font-size: 8cqmin;
       color: var(--muted);
-      margin-top: 6px;
+      margin-top: 3cqmin;
     }
 
     /* Active badge */
@@ -425,13 +423,13 @@
       display: inline-block;
       background: var(--accent);
       color: white;
-      font-size: 0.6rem;
+      font-size: 7cqmin;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.08em;
-      padding: 2px 6px;
+      padding: 2cqmin 4cqmin;
       border-radius: 999px;
-      margin-top: 8px;
+      margin-top: 5cqmin;
     }
   </style>
 </head>
@@ -611,6 +609,32 @@
     return `${h12}:${String(m).padStart(2,'0')} ${ampm}`;
   }
 
+  // ── Grid Sizing ─────────────────────────────────────────────────────────────
+  function resizeGrid() {
+    const grid     = document.getElementById('period-grid');
+    const mainEl   = document.querySelector('main');
+    const headerEl = document.querySelector('header');
+    const clockEl  = document.getElementById('clock-display');
+
+    const w    = window.innerWidth;
+    const cols = w < 480 ? 2 : w < 700 ? 3 : 4;
+    const rows = Math.ceil(numPeriods / cols);
+
+    const gap      = 16;
+    const mainPad  = 24;
+    const availW   = mainEl.clientWidth - mainPad * 2;
+    const clockH   = clockEl.offsetHeight + parseInt(getComputedStyle(clockEl).marginBottom);
+    const availH   = window.innerHeight - headerEl.offsetHeight - clockH - mainPad * 2;
+
+    const cardSize = Math.floor(Math.min(
+      (availW - gap * (cols - 1)) / cols,
+      (availH - gap * (rows - 1)) / rows
+    ));
+
+    grid.style.gridTemplateColumns = `repeat(${cols}, ${cardSize}px)`;
+    grid.style.gridTemplateRows    = `repeat(${rows}, ${cardSize}px)`;
+  }
+
   // ── Render ──────────────────────────────────────────────────────────────────
   function renderPeriods() {
     const grid = document.getElementById('period-grid');
@@ -676,6 +700,7 @@
 
       grid.appendChild(card);
     }
+    resizeGrid();
   }
 
   function updateClock() {
@@ -819,6 +844,7 @@
     buildManualInputs();
     initSettings();
     startTimer();
+    window.addEventListener('resize', resizeGrid);
 
     const now = new Date();
     document.getElementById('header-date').textContent =
