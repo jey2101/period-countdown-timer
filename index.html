@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Period Countdown Timer</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy: #1a2744;
+      --navy-light: #253460;
+      --accent: #2ecc71;
+      --accent-bg: #eafbf1;
+      --muted: #9ca3af;
+      --muted-bg: #f3f4f6;
+      --card-bg: #ffffff;
+      --border: #e5e7eb;
+      --text: #111827;
+      --text-secondary: #6b7280;
+      --radius: 12px;
+      --shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f0f2f5;
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* Header */
+    header {
+      background: var(--navy);
+      color: white;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+    }
+
+    header h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    header p {
+      font-size: 0.8rem;
+      opacity: 0.7;
+      margin-top: 2px;
+    }
+
+    #gear-btn {
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: white;
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      transition: background 0.2s;
+      flex-shrink: 0;
+    }
+
+    #gear-btn:hover { background: rgba(255,255,255,0.22); }
+    #gear-btn.active { background: rgba(255,255,255,0.28); }
+
+    /* Settings Panel */
+    #settings-panel {
+      background: white;
+      border-bottom: 1px solid var(--border);
+      overflow: hidden;
+      max-height: 0;
+      transition: max-height 0.35s ease, box-shadow 0.35s;
+    }
+
+    #settings-panel.open {
+      max-height: 800px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    }
+
+    .settings-inner {
+      padding: 24px;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    /* Periods count row */
+    .periods-count-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .periods-count-row label {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+
+    .periods-count-row input {
+      width: 72px;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.9rem;
+      color: var(--text);
+      background: var(--muted-bg);
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .periods-count-row input:focus {
+      outline: none;
+      border-color: var(--navy);
+      background: white;
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--muted-bg);
+      border-radius: 8px;
+      padding: 4px;
+      margin-bottom: 20px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 8px 12px;
+      border: none;
+      background: transparent;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      transition: all 0.2s;
+    }
+
+    .tab-btn.active {
+      background: white;
+      color: var(--navy);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* Manual Entry */
+    .period-inputs {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .period-input-group {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      background: var(--muted-bg);
+    }
+
+    .period-input-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--navy);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 8px;
+    }
+
+    .time-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+
+    .time-row:last-child { margin-bottom: 0; }
+
+    .time-row label {
+      font-size: 0.65rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      width: 28px;
+      flex-shrink: 0;
+    }
+
+    .time-row input[type="time"] {
+      flex: 1;
+      min-width: 0;
+      padding: 5px 7px;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      font-size: 0.82rem;
+      color: var(--text);
+      background: white;
+      transition: border-color 0.2s;
+    }
+
+    .time-row input[type="time"]:focus {
+      outline: none;
+      border-color: var(--navy);
+    }
+
+    /* Auto-Calculate */
+    .auto-calc-fields {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .field-group label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .field-group input {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.9rem;
+      color: var(--text);
+      background: var(--muted-bg);
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .field-group input:focus {
+      outline: none;
+      border-color: var(--navy);
+      background: white;
+    }
+
+    .preview-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 8px;
+      margin-bottom: 20px;
+      padding: 14px;
+      background: var(--muted-bg);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .preview-item {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      font-weight: 600;
+    }
+
+    .preview-item .preview-times {
+      font-weight: 400;
+      color: var(--navy);
+      margin-top: 2px;
+      line-height: 1.5;
+    }
+
+    /* Buttons */
+    .btn {
+      padding: 10px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: var(--navy);
+      color: white;
+    }
+
+    .btn-primary:hover { background: var(--navy-light); }
+
+    .btn-success {
+      background: #059669;
+      color: white;
+    }
+
+    .btn-success:hover { background: #047857; }
+
+    .save-feedback {
+      display: inline-block;
+      margin-left: 12px;
+      font-size: 0.85rem;
+      color: #059669;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .save-feedback.show { opacity: 1; }
+
+    /* Main Grid */
+    main {
+      padding: 24px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    #clock-display {
+      text-align: center;
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--text-secondary);
+      margin-bottom: 20px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .period-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    @media (min-width: 480px) {
+      .period-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    @media (min-width: 700px) {
+      .period-grid { grid-template-columns: repeat(4, 1fr); }
+    }
+
+    @media (min-width: 900px) {
+      .period-grid { grid-template-columns: repeat(5, 1fr); }
+    }
+
+    /* Period Cards */
+    .period-card {
+      background: var(--card-bg);
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 16px;
+      text-align: center;
+      box-shadow: var(--shadow);
+      transition: border-color 0.3s, background 0.3s, transform 0.2s;
+    }
+
+    .period-card:hover { transform: translateY(-1px); }
+
+    .period-card.active {
+      border-color: var(--accent);
+      background: var(--accent-bg);
+    }
+
+    .period-card.ended {
+      border-color: var(--border);
+      background: var(--muted-bg);
+    }
+
+    .period-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+
+    .period-card.active .period-label { color: #059669; }
+    .period-card.ended .period-label { color: var(--muted); }
+
+    .period-start-time,
+    .period-end-time {
+      font-size: 0.72rem;
+      color: var(--text-secondary);
+    }
+
+    .period-start-time { margin-bottom: 6px; }
+    .period-end-time   { margin-top: 6px; }
+
+    .period-card.active .period-start-time,
+    .period-card.active .period-end-time { color: #059669; }
+
+    .period-card.ended .period-start-time,
+    .period-card.ended .period-end-time  { color: var(--muted); }
+
+    .period-countdown {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--navy);
+      line-height: 1.2;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.02em;
+    }
+
+    .period-card.active .period-countdown {
+      color: #065f46;
+    }
+
+    .period-card.ended .period-countdown { color: var(--muted); font-size: 1.1rem; }
+
+    .no-config-hint {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    /* Active badge */
+    .active-badge {
+      display: inline-block;
+      background: var(--accent);
+      color: white;
+      font-size: 0.6rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 2px 6px;
+      border-radius: 999px;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Period Countdown Timer</h1>
+    <p id="header-date"></p>
+  </div>
+  <button id="gear-btn" title="Settings" aria-label="Open settings">⚙️</button>
+</header>
+
+<!-- Settings Panel -->
+<div id="settings-panel" aria-hidden="true">
+  <div class="settings-inner">
+
+    <!-- Number of Periods -->
+    <div class="periods-count-row">
+      <label for="num-periods">Number of Periods</label>
+      <input type="number" id="num-periods" min="1" max="15" value="9">
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="manual">Manual Entry</button>
+      <button class="tab-btn" data-tab="auto">Auto-Calculate</button>
+    </div>
+
+    <!-- Manual Entry Tab -->
+    <div id="tab-manual" class="tab-panel active">
+      <div class="period-inputs" id="manual-inputs"></div>
+      <button class="btn btn-primary" id="save-btn">Save Times</button>
+      <span class="save-feedback" id="save-feedback">Saved!</span>
+    </div>
+
+    <!-- Auto-Calculate Tab -->
+    <div id="tab-auto" class="tab-panel">
+      <div class="auto-calc-fields">
+        <div class="field-group">
+          <label for="ac-start">First Period Start</label>
+          <input type="time" id="ac-start">
+        </div>
+        <div class="field-group">
+          <label for="ac-period">Period Length (min)</label>
+          <input type="number" id="ac-period" min="1" max="180" placeholder="e.g. 50">
+        </div>
+        <div class="field-group">
+          <label for="ac-break">Break Length (min)</label>
+          <input type="number" id="ac-break" min="0" max="60" placeholder="e.g. 5">
+        </div>
+      </div>
+      <div class="preview-grid" id="auto-preview"></div>
+      <button class="btn btn-success" id="apply-btn">Apply Times</button>
+      <span class="save-feedback" id="apply-feedback">Applied!</span>
+    </div>
+  </div>
+</div>
+
+<!-- Main Content -->
+<main>
+  <div id="clock-display"></div>
+  <div class="period-grid" id="period-grid"></div>
+</main>
+
+<script>
+  // ── State ───────────────────────────────────────────────────────────────────
+  const STORAGE_KEY = 'periodEndTimes';
+  const START_KEY   = 'periodStartTimes';
+  const COUNT_KEY   = 'periodCount';
+  const DEFAULT_PERIODS = 9;
+
+  let numPeriods      = DEFAULT_PERIODS;
+  let periodEndTimes   = Array(numPeriods).fill(''); // "HH:MM" 24h
+  let periodStartTimes = Array(numPeriods).fill(''); // "HH:MM" 24h
+
+  // ── Persistence ─────────────────────────────────────────────────────────────
+  function loadTimes() {
+    try {
+      const countRaw = localStorage.getItem(COUNT_KEY);
+      if (countRaw) {
+        const c = parseInt(countRaw);
+        if (c >= 1 && c <= 15) numPeriods = c;
+      }
+      const endRaw = localStorage.getItem(STORAGE_KEY);
+      if (endRaw) {
+        const parsed = JSON.parse(endRaw);
+        if (Array.isArray(parsed))
+          periodEndTimes = Array(numPeriods).fill('').map((_, i) => parsed[i] || '');
+      } else {
+        periodEndTimes = Array(numPeriods).fill('');
+      }
+      const startRaw = localStorage.getItem(START_KEY);
+      if (startRaw) {
+        const parsed = JSON.parse(startRaw);
+        if (Array.isArray(parsed))
+          periodStartTimes = Array(numPeriods).fill('').map((_, i) => parsed[i] || '');
+      } else {
+        periodStartTimes = Array(numPeriods).fill('');
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  function saveAllTimes(startTimes, endTimes) {
+    periodStartTimes = Array(numPeriods).fill('').map((_, i) => startTimes[i] || '');
+    periodEndTimes   = Array(numPeriods).fill('').map((_, i) => endTimes[i]   || '');
+    localStorage.setItem(START_KEY,   JSON.stringify(periodStartTimes));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(periodEndTimes));
+  }
+
+  function saveCount(count) {
+    const oldStart = periodStartTimes.slice();
+    const oldEnd   = periodEndTimes.slice();
+    numPeriods = count;
+    periodStartTimes = Array(numPeriods).fill('').map((_, i) => oldStart[i] || '');
+    periodEndTimes   = Array(numPeriods).fill('').map((_, i) => oldEnd[i]   || '');
+    localStorage.setItem(COUNT_KEY,   String(count));
+    localStorage.setItem(START_KEY,   JSON.stringify(periodStartTimes));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(periodEndTimes));
+  }
+
+  // ── Auto-Calculate ──────────────────────────────────────────────────────────
+  // Returns { startTimes, endTimes } — both string[numPeriods] in "HH:MM"
+  function calculateTimes(startTimeStr, periodLen, breakLen) {
+    const empty = { startTimes: Array(numPeriods).fill(''), endTimes: Array(numPeriods).fill('') };
+    if (!startTimeStr || !periodLen) return empty;
+    const [sh, sm] = startTimeStr.split(':').map(Number);
+    const originMins = sh * 60 + sm;
+    const fmt = (totalMins) => {
+      const hh = Math.floor(totalMins / 60) % 24;
+      const mm = totalMins % 60;
+      return `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
+    };
+    const startTimes = [], endTimes = [];
+    for (let n = 1; n <= numPeriods; n++) {
+      const pStart = originMins + (n - 1) * (periodLen + breakLen);
+      startTimes.push(fmt(pStart));
+      endTimes.push(fmt(pStart + periodLen));
+    }
+    return { startTimes, endTimes };
+  }
+
+  // ── Time Utilities ──────────────────────────────────────────────────────────
+  function getRemainingTime(endTimeStr) {
+    if (!endTimeStr) return { status: 'unset' };
+    const now = new Date();
+    const [eh, em] = endTimeStr.split(':').map(Number);
+    const endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), eh, em, 0);
+    const diffMs = endDate - now;
+    if (diffMs <= 0) return { status: 'ended' };
+    const totalSecs = Math.ceil(diffMs / 1000);
+    return {
+      status: 'upcoming',
+      hours:   Math.floor(totalSecs / 3600),
+      minutes: Math.floor((totalSecs % 3600) / 60),
+      seconds: totalSecs % 60
+    };
+  }
+
+  function formatRemaining(remaining, showSeconds = false) {
+    if (remaining.status === 'unset') return '--';
+    if (remaining.status === 'ended') return 'Ended';
+    if (showSeconds)
+      return `${remaining.minutes}min ${String(remaining.seconds).padStart(2, '0')}s`;
+    return `${remaining.hours}h ${remaining.minutes}min`;
+  }
+
+  function formatTime12(timeStr) {
+    if (!timeStr) return '';
+    const [h, m] = timeStr.split(':').map(Number);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12  = h % 12 || 12;
+    return `${h12}:${String(m).padStart(2,'0')} ${ampm}`;
+  }
+
+  // ── Render ──────────────────────────────────────────────────────────────────
+  function renderPeriods() {
+    const grid = document.getElementById('period-grid');
+
+    // Active = first period that hasn't ended
+    let activePeriod = -1;
+    for (let i = 0; i < numPeriods; i++) {
+      if (getRemainingTime(periodEndTimes[i]).status === 'upcoming') {
+        activePeriod = i;
+        break;
+      }
+    }
+
+    grid.innerHTML = '';
+    for (let i = 0; i < numPeriods; i++) {
+      const remaining = getRemainingTime(periodEndTimes[i]);
+      const isActive  = i === activePeriod;
+      const isEnded   = remaining.status === 'ended';
+      const isUnset   = remaining.status === 'unset';
+
+      const card = document.createElement('div');
+      card.className = 'period-card' + (isActive ? ' active' : '') + (isEnded ? ' ended' : '');
+
+      // Period label
+      const label = document.createElement('div');
+      label.className = 'period-label';
+      label.textContent = `Period ${i + 1}`;
+      card.appendChild(label);
+
+      // Start time (above countdown)
+      const startEl = document.createElement('div');
+      startEl.className = 'period-start-time';
+      startEl.textContent = periodStartTimes[i] ? `Starts ${formatTime12(periodStartTimes[i])}` : '';
+      startEl.style.visibility = periodStartTimes[i] ? 'visible' : 'hidden';
+      card.appendChild(startEl);
+
+      // Countdown
+      const countdown = document.createElement('div');
+      countdown.className = 'period-countdown';
+      countdown.textContent = isUnset ? '--' : formatRemaining(remaining, isActive);
+      card.appendChild(countdown);
+
+      // End time (below countdown)
+      const endEl = document.createElement('div');
+      endEl.className = 'period-end-time';
+      endEl.textContent = periodEndTimes[i] ? `Ends ${formatTime12(periodEndTimes[i])}` : '';
+      endEl.style.visibility = periodEndTimes[i] ? 'visible' : 'hidden';
+      card.appendChild(endEl);
+
+      // "Now" badge — always rendered, hidden when inactive, to keep uniform height
+      const badge = document.createElement('div');
+      badge.className = 'active-badge';
+      badge.textContent = 'Now';
+      badge.style.visibility = isActive ? 'visible' : 'hidden';
+      card.appendChild(badge);
+
+      if (isUnset) {
+        const hint = document.createElement('div');
+        hint.className = 'no-config-hint';
+        hint.textContent = 'Open ⚙️ to set';
+        card.appendChild(hint);
+      }
+
+      grid.appendChild(card);
+    }
+  }
+
+  function updateClock() {
+    const now = new Date();
+    const opts = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    const dateStr = now.toLocaleDateString(undefined, opts);
+    const timeStr = now.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    document.getElementById('clock-display').textContent = `${dateStr} · ${timeStr}`;
+    document.getElementById('header-date').textContent = timeStr;
+  }
+
+  function startTimer() {
+    updateClock();
+    renderPeriods();
+    setInterval(() => { updateClock(); renderPeriods(); }, 1000);
+  }
+
+  // ── Manual Entry ────────────────────────────────────────────────────────────
+  function buildManualInputs() {
+    const container = document.getElementById('manual-inputs');
+    container.innerHTML = '';
+    for (let i = 0; i < numPeriods; i++) {
+      const group = document.createElement('div');
+      group.className = 'period-input-group';
+      group.innerHTML = `
+        <div class="period-input-label">Period ${i + 1}</div>
+        <div class="time-row">
+          <label for="ms-${i}">Start</label>
+          <input type="time" id="ms-${i}" value="${periodStartTimes[i] || ''}">
+        </div>
+        <div class="time-row">
+          <label for="me-${i}">End</label>
+          <input type="time" id="me-${i}" value="${periodEndTimes[i] || ''}">
+        </div>
+      `;
+      container.appendChild(group);
+    }
+  }
+
+  function getManualInputValues() {
+    const startTimes = [], endTimes = [];
+    for (let i = 0; i < numPeriods; i++) {
+      startTimes.push((document.getElementById(`ms-${i}`) || {}).value || '');
+      endTimes.push((document.getElementById(`me-${i}`) || {}).value || '');
+    }
+    return { startTimes, endTimes };
+  }
+
+  // ── Auto-Calculate Preview ──────────────────────────────────────────────────
+  function updateAutoPreview() {
+    const startVal  = document.getElementById('ac-start').value;
+    const periodVal = parseInt(document.getElementById('ac-period').value) || 0;
+    const breakVal  = parseInt(document.getElementById('ac-break').value)  || 0;
+
+    const { startTimes, endTimes } = calculateTimes(startVal, periodVal, breakVal);
+    const preview = document.getElementById('auto-preview');
+    preview.innerHTML = '';
+
+    for (let i = 0; i < numPeriods; i++) {
+      const item = document.createElement('div');
+      item.className = 'preview-item';
+      item.innerHTML = `Period ${i + 1}
+        <div class="preview-times">
+          ${startTimes[i] ? formatTime12(startTimes[i]) : '--'}<br>
+          ${endTimes[i]   ? formatTime12(endTimes[i])   : '--'}
+        </div>`;
+      preview.appendChild(item);
+    }
+
+    return { startTimes, endTimes };
+  }
+
+  // ── Settings UI ─────────────────────────────────────────────────────────────
+  function showFeedback(id) {
+    const el = document.getElementById(id);
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 2000);
+  }
+
+  function initSettings() {
+    document.getElementById('num-periods').value = numPeriods;
+
+    document.getElementById('num-periods').addEventListener('change', () => {
+      const val = parseInt(document.getElementById('num-periods').value);
+      if (val >= 1 && val <= 15) {
+        saveCount(val);
+        buildManualInputs();
+        updateAutoPreview();
+        renderPeriods();
+      }
+    });
+
+    const gearBtn = document.getElementById('gear-btn');
+    const panel   = document.getElementById('settings-panel');
+    gearBtn.addEventListener('click', () => {
+      const isOpen = panel.classList.toggle('open');
+      gearBtn.classList.toggle('active', isOpen);
+      panel.setAttribute('aria-hidden', String(!isOpen));
+      if (isOpen) buildManualInputs();
+    });
+
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
+      });
+    });
+
+    document.getElementById('save-btn').addEventListener('click', () => {
+      const { startTimes, endTimes } = getManualInputValues();
+      saveAllTimes(startTimes, endTimes);
+      renderPeriods();
+      showFeedback('save-feedback');
+    });
+
+    ['ac-start', 'ac-period', 'ac-break'].forEach(id => {
+      document.getElementById(id).addEventListener('input', updateAutoPreview);
+    });
+
+    document.getElementById('apply-btn').addEventListener('click', () => {
+      const startVal  = document.getElementById('ac-start').value;
+      const periodVal = parseInt(document.getElementById('ac-period').value) || 0;
+      const breakVal  = parseInt(document.getElementById('ac-break').value)  || 0;
+      const { startTimes, endTimes } = calculateTimes(startVal, periodVal, breakVal);
+      if (endTimes.some(t => t)) {
+        saveAllTimes(startTimes, endTimes);
+        buildManualInputs();
+        renderPeriods();
+        showFeedback('apply-feedback');
+      }
+    });
+
+    updateAutoPreview();
+  }
+
+  // ── Init ────────────────────────────────────────────────────────────────────
+  function init() {
+    loadTimes();
+    buildManualInputs();
+    initSettings();
+    startTimer();
+
+    const now = new Date();
+    document.getElementById('header-date').textContent =
+      now.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  }
+
+  init();
+</script>
+</body>
+</html>
